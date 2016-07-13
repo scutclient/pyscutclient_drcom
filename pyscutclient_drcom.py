@@ -109,7 +109,7 @@ if __name__ == '__main__':
         print '\n'
         print '='*60
         print '\n    pyscutclient_drcom by 7forz\n'
-        print '  Project page at https://github.com/7forz/pyscutclient_drcom'
+        print '  Project page at https://github.com/scutclient/pyscutclient_drcom'
         print '='*60
         print '\nConfirm your MAC: %s' %MY_MAC
         print 'Confirm your IP: %s' %MY_IP
