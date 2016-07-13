@@ -101,7 +101,7 @@ def sniff_handler(pkt):
 
 if __name__ == '__main__':
     if not username:
-        print '\nUsage: sudo python pyscutclient.py --username USERNAME [--password PASSWORD] [--iface IFACE]'
+        print '\nUsage: sudo python pyscutclient_drcom.py --username USERNAME [--password PASSWORD] [--iface IFACE]'
         exit(1)
     if not password:
         password = username
@@ -121,4 +121,4 @@ if __name__ == '__main__':
     finally:
         send_logoff()
         if SAVEDUMP:
-            wrpcap('pyscutclient.cap', pkts)
+            wrpcap('pyscutclient_drcom.cap', pkts)
