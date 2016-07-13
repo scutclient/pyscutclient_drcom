@@ -73,7 +73,7 @@ def send_logoff():
     print 'SCUTclient: Logoff.'
 
 def update_md5_packet(server_md5_info):
-    p_md5 = Ether(src=MY_MAC, dst=DST_MAC, type=0x888e)/EAPOL(version=1, type=0, len=43)/EAP(code=2, type=4, id=0, len=43)/Raw(load='\x10' + md5( '\x00' + password + server_md5_info ).hexdigest() + username + '\x00Da*\x00' + MY_IP_HEX)/Padding(load='\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+    p_md5 = Ether(src=MY_MAC, dst=DST_MAC, type=0x888e)/EAPOL(version=1, type=0, len=43)/EAP(code=2, type=4, id=0, len=43)/Raw(load='\x10' + md5( '\x00' + password + server_md5_info ).digest() + username + '\x00Da*\x00' + MY_IP_HEX)/Padding(load='\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
 
 def sniff_handler(pkt):
     pkts.append(pkt)
