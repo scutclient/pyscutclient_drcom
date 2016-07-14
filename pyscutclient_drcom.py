@@ -83,7 +83,7 @@ def sniff_handler(pkt):
             DST_MAC = pkt.src  # 把目标MAC改为服务器的MAC
             p_identity.dst = DST_MAC
             p_md5.dst = DST_MAC
-            p_identity[EAP].id = id  # id要对应，话说以前的版本(pyscutclient)从来不改id也能稳定过认证...
+            p_identity[EAP].id = pkt[EAP].id  # id要对应，话说以前的版本(pyscutclient)从来不改id也能稳定过认证...
             send_identity()
         elif pkt.haslayer(EAP) and (pkt[EAP].code == EAP_REQUEST) and (pkt[EAP].type == EAP_TYPE_MD5):
             print 'Server: Request MD5-Challenge!'
