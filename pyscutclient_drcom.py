@@ -272,6 +272,7 @@ def sniff_handler(pkt):
                                '915e3d0281c3a0bdec36d7f9c15e7a16b59c12b8' + 24 * '\x00'
             global crc_8byte_for_244byte_info
             crc_8byte_for_244byte_info = crc_drcom_info_hostname(udp_244byte_info)  # 马上计算crc 之后回填
+            global p_udp_244byte_info
             p_udp_244byte_info.load = '\x07\x01\xf4\x00\x03\x0c' + MY_MAC_HEX + MY_IP_HEX + '\x02\x22\x00\x2a' + \
                 challenge_seed + crc_8byte_for_244byte_info + 4 * '\x00' + username + \
                 MY_PC_NAME + (32 - len(MY_PC_NAME)) * '\x00' + \
