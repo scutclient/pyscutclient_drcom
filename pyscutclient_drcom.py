@@ -179,9 +179,6 @@ def send_udp_computerinfo():
 def send_udp_misc1():
     if SAVEDUMP:
         pkts.append(p_udp_misc1)
-    global drcom_pkt_id  # 更改全局变量
-    drcom_pkt_id += 1  # 对话id加1  先加保证比收到misc 2早
-
     send(p_udp_misc1, verbose=0)
     print 'DrCOM Client: Send misc type 1'
 
@@ -189,9 +186,6 @@ def send_udp_misc1():
 def send_udp_misc3():
     if SAVEDUMP:
         pkts.append(p_udp_misc3)
-    global drcom_pkt_id  # 更改全局变量
-    drcom_pkt_id += 1  # 对话id加1  先加保证比收到misc 4早
-
     send(p_udp_misc3, verbose=0)
     print 'DrCOM Client: Send misc type 3'
 
@@ -208,11 +202,13 @@ def send_udp_38byte_alive():
 
 
 def update_udp_misc1():
-    global misc_random_4bytes
+    global misc_random_4bytes  # 更改全局变量
     misc_random_4bytes = chr(random.randint(0, 255)) + chr(random.randint(0, 255)) + \
                          chr(random.randint(0, 255)) + chr(random.randint(0, 255))  # 更新4字节的随机值 在2次对话中不变
     global p_udp_misc1  # 更改全局变量
     p_udp_misc1.load = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x01\x0f\x27' + misc_random_4bytes + 28 * '\x00'
+    global drcom_pkt_id
+    drcom_pkt_id += 1  # 对话id加1  发送包前先加保证比收到misc 2早
 
 
 def update_udp_misc3():
@@ -222,6 +218,8 @@ def update_udp_misc3():
     global p_udp_misc3  # 更改全局变量
     p_udp_misc3.load = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x03\x0f\x27' + \
            misc_random_4bytes + 12 * '\x00' + crc + MY_IP_HEX + 8 * '\x00'
+    global drcom_pkt_id  # 更改全局变量
+    drcom_pkt_id += 1  # 对话id加1  先加保证比收到misc 4早
 
 
 def alive_per_12s():
