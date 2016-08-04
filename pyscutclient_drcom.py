@@ -45,7 +45,7 @@ DRCOM_MISC_TYPE_4 = '\x04'
 
 drcom_pkt_id = 0  # 之后随着发包而增加
 misc_random_4bytes = ''  # misc type 1和type 3都要用到
-crc_8byte_for_244byte_info = ''  # 244byte和12s alive都要用到
+crc_4byte_for_244byte_info = ''  # 244byte和12s alive都要用到
 
 # 获取认证需要的信息
 username = args.username
@@ -179,6 +179,9 @@ def send_udp_computerinfo():
 def send_udp_misc1():
     if SAVEDUMP:
         pkts.append(p_udp_misc1)
+    global drcom_pkt_id  # 更改全局变量
+    drcom_pkt_id += 1  # 对话id加1  先加保证比收到misc 2早
+
     send(p_udp_misc1, verbose=0)
     print 'DrCOM Client: Send misc type 1'
 
@@ -186,13 +189,16 @@ def send_udp_misc1():
 def send_udp_misc3():
     if SAVEDUMP:
         pkts.append(p_udp_misc3)
+    global drcom_pkt_id  # 更改全局变量
+    drcom_pkt_id += 1  # 对话id加1  先加保证比收到misc 4早
+
     send(p_udp_misc3, verbose=0)
     print 'DrCOM Client: Send misc type 3'
 
 
 def send_udp_38byte_alive():
     global p_udp_38byte_alive
-    p_udp_38byte_alive.load = '\xff' + crc_8byte_for_244byte_info + p_md5.load[5:17] + 3 * '\x00' + \
+    p_udp_38byte_alive.load = '\xff' + crc_4byte_for_244byte_info + p_md5.load[5:17] + 3 * '\x00' + \
         '\x44\x72\x63\x6f' + DST_IP_HEX + '\x2e\x63' + MY_IP_HEX + '\x41\x68' + '\x00\x00'
 
     if SAVEDUMP:
@@ -202,13 +208,11 @@ def send_udp_38byte_alive():
 
 
 def update_udp_misc1():
-    global misc_random_4bytes  # 更改全局变量
+    global misc_random_4bytes
     misc_random_4bytes = chr(random.randint(0, 255)) + chr(random.randint(0, 255)) + \
                          chr(random.randint(0, 255)) + chr(random.randint(0, 255))  # 更新4字节的随机值 在2次对话中不变
     global p_udp_misc1  # 更改全局变量
     p_udp_misc1.load = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x01\x0f\x27' + misc_random_4bytes + 28 * '\x00'
-    global drcom_pkt_id
-    drcom_pkt_id += 1  # 对话id加1  发送包前先加保证比收到misc 2早
 
 
 def update_udp_misc3():
@@ -218,8 +222,6 @@ def update_udp_misc3():
     global p_udp_misc3  # 更改全局变量
     p_udp_misc3.load = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x03\x0f\x27' + \
            misc_random_4bytes + 12 * '\x00' + crc + MY_IP_HEX + 8 * '\x00'
-    global drcom_pkt_id  # 更改全局变量
-    drcom_pkt_id += 1  # 对话id加1  先加保证比收到misc 4早
 
 
 def alive_per_12s():
@@ -264,17 +266,16 @@ def sniff_handler(pkt):
             print 'DrCOM: Response for alive!'
             challenge_seed = pkt.load[8:12]   # 提取服务器给出的4byte challenge_seed
 
-            # 这里保证是244 byte 填入challenge_seed和特定的8字节后算crc
+            # 这里保证是244 byte，填入之前的challenge_seed和特定的8字节后算crc
             udp_244byte_info = '\x07\x01\xf4\x00\x03\x0c' + MY_MAC_HEX + MY_IP_HEX + '\x02\x22\x00\x2a' + \
                                challenge_seed + '\xc7\x2f\x31\x01\x7e\x00\x00\x00' + username + \
                                MY_PC_NAME + (32 - len(MY_PC_NAME)) * '\x00' + \
                                '\xca\x26\xc1\x21' + 36 * '\x00' + 'DrCOM\x00\xcf\x07\x2a\x00' + 54 * '\x00' + \
                                '915e3d0281c3a0bdec36d7f9c15e7a16b59c12b8' + 24 * '\x00'
-            global crc_8byte_for_244byte_info
-            crc_8byte_for_244byte_info = crc_drcom_info_hostname(udp_244byte_info)  # 马上计算crc 之后回填
-            global p_udp_244byte_info
+            global crc_4byte_for_244byte_info
+            crc_4byte_for_244byte_info = crc_drcom_info_hostname(udp_244byte_info)  # 马上计算crc 下一行回填 并把接下来的4字节置零
             p_udp_244byte_info.load = '\x07\x01\xf4\x00\x03\x0c' + MY_MAC_HEX + MY_IP_HEX + '\x02\x22\x00\x2a' + \
-                challenge_seed + crc_8byte_for_244byte_info + 4 * '\x00' + username + \
+                challenge_seed + crc_4byte_for_244byte_info + 4 * '\x00' + username + \
                 MY_PC_NAME + (32 - len(MY_PC_NAME)) * '\x00' + \
                 '\xca\x26\xc1\x21' + 36 * '\x00' + 'DrCOM\x00\xcf\x07\x2a\x00' + 54 * '\x00' + \
                 '915e3d0281c3a0bdec36d7f9c15e7a16b59c12b8' + 24 * '\x00'  # 这里保证是244 byte
