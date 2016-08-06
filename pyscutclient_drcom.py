@@ -46,6 +46,7 @@ DRCOM_MISC_TYPE_4 = '\x04'
 drcom_pkt_id = 0  # 之后随着发包而增加
 misc_random_4bytes = ''  # misc type 1和type 3都要用到
 crc_4byte_for_244byte_info = ''  # 244byte和12s alive都要用到
+alive_per_12s_info = ''
 
 # 获取认证需要的信息
 username = args.username
@@ -199,7 +200,7 @@ def send_udp_misc3():
 def send_udp_38byte_alive():
     global p_udp_38byte_alive
     p_udp_38byte_alive.load = '\xff' + crc_4byte_for_244byte_info + p_md5.load[5:17] + 3 * '\x00' + \
-        '\x44\x72\x63\x6f' + DST_IP_HEX + '\x2e\x63' + MY_IP_HEX + '\x41\x68' + '\x00\x00'
+        alive_per_12s_info + '\x00\x00'
 
     if SAVEDUMP:
         pkts.append(p_udp_38byte_alive)
@@ -262,9 +263,16 @@ def sniff_handler(pkt):
             send_start()
 
         elif pkt.haslayer(UDP) and pkt.dport == 61440 and pkt[UDP].len == 40 and pkt.load[4] == DRCOM_RESPONSE_FOR_ALIVE:
-            # 这里是udp服务器回应的第一个包 需要提取4字节challenge seed 生成244字节的数据 再求crc 最后回填
+            # 这里是udp服务器回应的第一个包 需要提取4字节challenge seed 生成244字节的数据 再求crc 最后回填；还要提取16字节用于38B的alive
             print 'DrCOM: Response for alive!'
             challenge_seed = pkt.load[8:12]   # 提取服务器给出的4byte challenge_seed
+            
+            info_1 = pkt.load[16:32]  # 用于38bytes的alive_per_12s
+            info_2 = [0] * 16
+            for i in range(16):
+                info_2[i] = ( (ord(info_1[i]) << (i & 0x07)) + (ord(info_1[i]) >> (8-(i & 0x07))) ) % 256  # 保留低8位 下面转化为hex
+            global alive_per_12s_info
+            alive_per_12s_info = ''.join( chr(info_2[i]) for i in range(16) )
 
             # 这里保证是244 byte，填入之前的challenge_seed和特定的8字节后算crc
             udp_244byte_info = '\x07\x01\xf4\x00\x03\x0c' + MY_MAC_HEX + MY_IP_HEX + '\x02\x22\x00\x2a' + \
