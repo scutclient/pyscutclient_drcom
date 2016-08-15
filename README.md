@@ -24,4 +24,7 @@
 
 感谢华工路由器群等的各种帮助，群号262939451。
 
-再次重申，仅供学习、测试使用。
+
+Windows环境可以试试[安装scapy的Windows依赖](https://github.com/Kondziowy/scapy_win64)，它适用于Python 2.7，我试了似乎可以用。
+
+先装Python 2.7，再装Windows依赖。
