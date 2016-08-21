@@ -61,6 +61,8 @@ DST_MAC = 'ff:ff:ff:ff:ff:ff'  # 到时改为由request identity数据包中获�
 DST_IP_HEX = '\xca\x26\xd2\x83'   # 学校统一的服务器
 MY_PC_NAME = socket.gethostname()  # 获得本机的计算机名
 
+keep_alive_thread = None
+
 
 pkts = []  # 捕获的包放到该列表，用于dump pcap
 
@@ -213,16 +215,16 @@ def update_udp_misc1():
     misc_random_4bytes = chr(random.randint(0, 255)) + chr(random.randint(0, 255)) + \
                          chr(random.randint(0, 255)) + chr(random.randint(0, 255))  # 更新4字节的随机值 在2次对话中不变
     global p_udp_misc1  # 更改全局变量
-    p_udp_misc1.load = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x01\x0f\x27' + misc_random_4bytes + 28 * '\x00'
+    p_udp_misc1.load = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x01\xdc\x02' + misc_random_4bytes + 28 * '\x00'
 
 
-def update_udp_misc3():
-    temp = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x03\x0f\x27' + \
+def update_udp_misc3(former):
+    temp = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x03\xdc\x02' + \
            misc_random_4bytes + 12 * '\x00' + 4 * '\x00' + MY_IP_HEX + 8 * '\x00'   # 4个\x00是因为到时算出4字节crc要填回这个位置
     crc = crc_misc_type_3(temp)
     global p_udp_misc3  # 更改全局变量
-    p_udp_misc3.load = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x03\x0f\x27' + \
-           misc_random_4bytes + 12 * '\x00' + crc + MY_IP_HEX + 8 * '\x00'
+    p_udp_misc3.load = '\x07' + chr(drcom_pkt_id) + '\x28\x00\x0b\x03\xdc\x02' + \
+           misc_random_4bytes + 4 * '\x00' + former + 4 * b'\x00' + crc + MY_IP_HEX + 8 * '\x00'
 
 
 def alive_per_12s():
@@ -295,19 +297,18 @@ def sniff_handler(pkt):
             update_udp_misc1()
             send_udp_misc1()
 
-        elif pkt.haslayer(UDP) and pkt.dport == 61440 and pkt.load[4] == DRCOM_MISC_TYPE_2:
+        elif pkt.haslayer(UDP) and pkt.dport == 61440 and pkt.load[5] == DRCOM_MISC_TYPE_2:
             print 'DrCOM Server: Misc Type 2'
-            update_udp_misc3()
+            update_udp_misc3(pkt.load[16:20])
             send_udp_misc3()
 
-        elif pkt.haslayer(UDP) and pkt.dport == 61440 and pkt.load[4] == DRCOM_MISC_TYPE_4:
-            print 'DrCOM Server: Misc Type 4'
-            try:
-                assert t   # 第一次强行使它出错进入except创建线程 之后就不会再重新创建了
-            except BaseException:
-                t = threading.Thread(target=alive_per_12s)  #
-                t.setDaemon(True)  # 后台运行
-                t.start()
+        elif pkt.haslayer(UDP) and pkt.dport == 61440 and pkt.load[5] == DRCOM_MISC_TYPE_4:
+            print 'DrCOM Server: Misc Type 4 current thread: {}'.format(threading.activeCount())
+            global keep_alive_thread
+            if not keep_alive_thread:
+                keep_alive_thread = threading.Thread(target=alive_per_12s)  #
+                keep_alive_thread.setDaemon(True)  # 后台运行
+                keep_alive_thread.start()
 
     except BaseException as e:  # 捕获所有异常
         print 'Error:', e
@@ -327,7 +328,6 @@ if __name__ == '__main__':
         print '='*60
         print '\nConfirm your MAC: %s' % MY_MAC
         print 'Confirm your IP: %s' % MY_IP
-        
         send_start()
         sniff(filter="ether proto 0x888e || udp port 61440", prn=sniff_handler)  # 捕获802.1x和udp端口61440，捕获到的包给handler处理
     except KeyboardInterrupt as e:
